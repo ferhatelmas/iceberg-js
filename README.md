@@ -337,6 +337,32 @@ docker compose down -v
 
 MIT
 
+## Releases
+
+This project uses [release-please](https://github.com/googleapis/release-please) for automated releases. Here's how it works:
+
+1. **Commit with conventional commits**: Use [Conventional Commits](https://www.conventionalcommits.org/) format for your commits:
+   - `feat:` for new features (minor version bump)
+   - `fix:` for bug fixes (patch version bump)
+   - `feat!:` or `BREAKING CHANGE:` for breaking changes (major version bump)
+   - `chore:`, `docs:`, `test:`, etc. for non-release commits
+
+2. **Release PR is created automatically**: When you push to `main`, release-please creates/updates a release PR with:
+   - Version bump in `package.json`
+   - Updated `CHANGELOG.md`
+   - Release notes
+
+3. **Merge the release PR**: When you're ready to release, merge the PR. This will:
+   - Create a GitHub release and git tag
+   - Automatically publish to npm with provenance (using trusted publishing, no secrets needed)
+
+**Example commits:**
+```bash
+git commit -m "feat: add support for view operations"
+git commit -m "fix: handle empty namespace list correctly"
+git commit -m "feat!: change auth config structure"
+```
+
 ## Contributing
 
 Contributions are welcome! This library aims to be a minimal, generic client for the Iceberg REST Catalog API.
