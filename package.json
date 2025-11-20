@@ -1,0 +1,55 @@
+{
+  "name": "iceberg-js",
+  "version": "0.1.0",
+  "description": "A small, framework-agnostic JavaScript/TypeScript client for the Apache Iceberg REST Catalog",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "lint": "prettier --check .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "check": "pnpm lint && pnpm test && pnpm build"
+  },
+  "keywords": [
+    "iceberg",
+    "apache-iceberg",
+    "rest-catalog",
+    "data-lake",
+    "catalog"
+  ],
+  "author": "mandarini",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/supabase/iceberg-js"
+  },
+  "bugs": {
+    "url": "https://github.com/supabase/iceberg-js/issues"
+  },
+  "homepage": "https://github.com/supabase/iceberg-js#readme",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "prettier": "^3.6.2",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.12"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

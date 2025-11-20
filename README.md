@@ -1,0 +1,322 @@
+# iceberg-js
+
+A small, framework-agnostic JavaScript/TypeScript client for the **Apache Iceberg REST Catalog**.
+
+## Features
+
+- **Generic**: Works with any Iceberg REST Catalog implementation, not tied to any specific vendor
+- **Minimal**: Thin HTTP wrapper over the official REST API, no engine-specific logic
+- **Type-safe**: First-class TypeScript support with strongly-typed request/response models
+- **Fetch-based**: Uses native `fetch` API with support for custom implementations
+- **Universal**: Targets Node 18+ and modern browsers (ES2020)
+- **Catalog-only**: Focused on catalog operations (no data reading/Parquet support in v0.1.0)
+
+## Installation
+
+```bash
+npm install iceberg-js
+```
+
+## Quick Start
+
+```typescript
+import { IcebergRestCatalog } from 'iceberg-js'
+
+const catalog = new IcebergRestCatalog({
+  baseUrl: 'https://my-catalog.example.com/iceberg/v1',
+  auth: {
+    type: 'bearer',
+    token: process.env.ICEBERG_TOKEN,
+  },
+})
+
+// Create a namespace
+await catalog.createNamespace({ namespace: ['analytics'] })
+
+// Create a table
+await catalog.createTable(
+  { namespace: ['analytics'] },
+  {
+    name: 'events',
+    schema: {
+      type: 'struct',
+      fields: [
+        { id: 1, name: 'id', type: { type: 'long' }, required: true },
+        { id: 2, name: 'timestamp', type: { type: 'timestamp' }, required: true },
+        { id: 3, name: 'user_id', type: { type: 'string' }, required: false },
+      ],
+      'schema-id': 0,
+      'identifier-field-ids': [1],
+    },
+    'partition-spec': {
+      'spec-id': 0,
+      fields: [],
+    },
+    'write-order': {
+      'order-id': 0,
+      fields: [],
+    },
+    properties: {
+      'write.format.default': 'parquet',
+    },
+  }
+)
+```
+
+## API Reference
+
+### Constructor
+
+#### `new IcebergRestCatalog(options)`
+
+Creates a new catalog client instance.
+
+**Options:**
+
+- `baseUrl` (string, required): Base URL of the REST catalog
+- `auth` (AuthConfig, optional): Authentication configuration
+- `catalogName` (string, optional): Catalog name prefix for multi-catalog servers
+- `fetch` (typeof fetch, optional): Custom fetch implementation
+
+**Authentication types:**
+
+```typescript
+// No authentication
+{ type: 'none' }
+
+// Bearer token
+{ type: 'bearer', token: 'your-token' }
+
+// Custom header
+{ type: 'header', name: 'X-Custom-Auth', value: 'secret' }
+
+// Custom function
+{ type: 'custom', getHeaders: async () => ({ 'Authorization': 'Bearer ...' }) }
+```
+
+### Namespace Operations
+
+#### `listNamespaces(parent?: NamespaceIdentifier): Promise<NamespaceIdentifier[]>`
+
+List all namespaces, optionally under a parent namespace.
+
+```typescript
+const namespaces = await catalog.listNamespaces()
+// [{ namespace: ['default'] }, { namespace: ['analytics'] }]
+
+const children = await catalog.listNamespaces({ namespace: ['analytics'] })
+// [{ namespace: ['analytics', 'prod'] }]
+```
+
+#### `createNamespace(id: NamespaceIdentifier, metadata?: NamespaceMetadata): Promise<void>`
+
+Create a new namespace with optional properties.
+
+```typescript
+await catalog.createNamespace({ namespace: ['analytics'] }, { properties: { owner: 'data-team' } })
+```
+
+#### `dropNamespace(id: NamespaceIdentifier): Promise<void>`
+
+Drop a namespace. The namespace must be empty.
+
+```typescript
+await catalog.dropNamespace({ namespace: ['analytics'] })
+```
+
+#### `loadNamespaceMetadata(id: NamespaceIdentifier): Promise<NamespaceMetadata>`
+
+Load namespace metadata and properties.
+
+```typescript
+const metadata = await catalog.loadNamespaceMetadata({ namespace: ['analytics'] })
+// { properties: { owner: 'data-team', ... } }
+```
+
+### Table Operations
+
+#### `listTables(namespace: NamespaceIdentifier): Promise<TableIdentifier[]>`
+
+List all tables in a namespace.
+
+```typescript
+const tables = await catalog.listTables({ namespace: ['analytics'] })
+// [{ namespace: ['analytics'], name: 'events' }]
+```
+
+#### `createTable(namespace: NamespaceIdentifier, request: CreateTableRequest): Promise<TableMetadata>`
+
+Create a new table.
+
+```typescript
+const metadata = await catalog.createTable(
+  { namespace: ['analytics'] },
+  {
+    name: 'events',
+    schema: {
+      type: 'struct',
+      fields: [
+        { id: 1, name: 'id', type: { type: 'long' }, required: true },
+        { id: 2, name: 'timestamp', type: { type: 'timestamp' }, required: true },
+      ],
+      'schema-id': 0,
+    },
+    'partition-spec': {
+      'spec-id': 0,
+      fields: [
+        {
+          source_id: 2,
+          field_id: 1000,
+          name: 'ts_day',
+          transform: 'day',
+        },
+      ],
+    },
+  }
+)
+```
+
+#### `loadTable(id: TableIdentifier): Promise<TableMetadata>`
+
+Load table metadata.
+
+```typescript
+const metadata = await catalog.loadTable({
+  namespace: ['analytics'],
+  name: 'events',
+})
+```
+
+#### `updateTable(id: TableIdentifier, request: UpdateTableRequest): Promise<TableMetadata>`
+
+Update table metadata (schema, partition spec, or properties).
+
+```typescript
+const updated = await catalog.updateTable(
+  { namespace: ['analytics'], name: 'events' },
+  {
+    properties: { 'read.split.target-size': '134217728' },
+  }
+)
+```
+
+#### `dropTable(id: TableIdentifier): Promise<void>`
+
+Drop a table from the catalog.
+
+```typescript
+await catalog.dropTable({ namespace: ['analytics'], name: 'events' })
+```
+
+## Error Handling
+
+All API errors throw an `IcebergError` with details from the server:
+
+```typescript
+import { IcebergError } from 'iceberg-js'
+
+try {
+  await catalog.loadTable({ namespace: ['test'], name: 'missing' })
+} catch (error) {
+  if (error instanceof IcebergError) {
+    console.log(error.status) // 404
+    console.log(error.icebergType) // 'NoSuchTableException'
+    console.log(error.message) // 'Table does not exist'
+  }
+}
+```
+
+## TypeScript Types
+
+The library exports all relevant types:
+
+```typescript
+import type {
+  NamespaceIdentifier,
+  TableIdentifier,
+  TableSchema,
+  TableField,
+  IcebergType,
+  PartitionSpec,
+  SortOrder,
+  CreateTableRequest,
+  TableMetadata,
+  AuthConfig,
+} from 'iceberg-js'
+```
+
+## Supported Iceberg Types
+
+The following Iceberg primitive types are supported:
+
+- `boolean`, `int`, `long`, `float`, `double`
+- `string`, `uuid`, `binary`
+- `date`, `time`, `timestamp`, `timestamptz`
+- `decimal(precision, scale)`, `fixed(length)`
+
+## Browser Usage
+
+The library works in modern browsers that support native `fetch`:
+
+```typescript
+import { IcebergRestCatalog } from 'iceberg-js'
+
+const catalog = new IcebergRestCatalog({
+  baseUrl: 'https://public-catalog.example.com/iceberg/v1',
+  auth: { type: 'none' },
+})
+
+const namespaces = await catalog.listNamespaces()
+```
+
+## Node.js Usage
+
+Node.js 18+ includes native `fetch` support. For older versions, provide a custom fetch implementation:
+
+```typescript
+import { IcebergRestCatalog } from 'iceberg-js'
+import fetch from 'node-fetch'
+
+const catalog = new IcebergRestCatalog({
+  baseUrl: 'https://catalog.example.com/iceberg/v1',
+  auth: { type: 'bearer', token: 'token' },
+  fetch: fetch as any,
+})
+```
+
+## Limitations (v0.1.0)
+
+This is a catalog client only. The following are **not supported**:
+
+- Reading table data (scanning Parquet files)
+- Writing data to tables
+- Advanced table operations (commits, snapshots, time travel)
+- Views support
+- Multi-table transactions
+
+## Development
+
+```bash
+# Install dependencies
+pnpm install
+
+# Build the library
+pnpm run build
+
+# Run tests
+pnpm test
+
+# Format code
+pnpm run format
+
+# Lint and test
+pnpm run check
+```
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! This library aims to be a minimal, generic client for the Iceberg REST Catalog API.

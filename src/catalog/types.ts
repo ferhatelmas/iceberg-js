@@ -1,0 +1,136 @@
+export interface NamespaceIdentifier {
+  namespace: string[]
+}
+
+export interface NamespaceMetadata {
+  properties: Record<string, string>
+}
+
+export interface TableIdentifier {
+  namespace: string[]
+  name: string
+}
+
+export type IcebergType =
+  | { type: 'boolean' }
+  | { type: 'int' }
+  | { type: 'long' }
+  | { type: 'float' }
+  | { type: 'double' }
+  | { type: 'string' }
+  | { type: 'timestamp' }
+  | { type: 'date' }
+  | { type: 'time' }
+  | { type: 'timestamptz' }
+  | { type: 'uuid' }
+  | { type: 'binary' }
+  | { type: 'decimal'; precision: number; scale: number }
+  | { type: 'fixed'; length: number }
+
+export interface TableField {
+  id: number
+  name: string
+  type: IcebergType
+  required: boolean
+  doc?: string
+}
+
+export interface TableSchema {
+  type: 'struct'
+  fields: TableField[]
+  'schema-id'?: number
+  'identifier-field-ids'?: number[]
+}
+
+export interface PartitionField {
+  source_id: number
+  field_id: number
+  name: string
+  transform: string
+}
+
+export interface PartitionSpec {
+  'spec-id': number
+  fields: PartitionField[]
+}
+
+export interface SortField {
+  source_id: number
+  transform: string
+  direction: 'asc' | 'desc'
+  null_order: 'nulls-first' | 'nulls-last'
+}
+
+export interface SortOrder {
+  'order-id': number
+  fields: SortField[]
+}
+
+export interface CreateTableRequest {
+  name: string
+  schema: TableSchema
+  'partition-spec'?: PartitionSpec
+  'write-order'?: SortOrder
+  properties?: Record<string, string>
+  'stage-create'?: boolean
+}
+
+export interface UpdateTableRequest {
+  schema?: TableSchema
+  'partition-spec'?: PartitionSpec
+  properties?: Record<string, string>
+}
+
+export interface TableMetadata {
+  name: string
+  location: string
+  schema: TableSchema
+  'partition-spec': PartitionSpec
+  'write-order': SortOrder
+  properties: Record<string, string>
+  'metadata-location': string
+  'current-snapshot-id'?: number
+  snapshots?: unknown[]
+  'snapshot-log'?: unknown[]
+  'metadata-log'?: unknown[]
+  'sort-orders'?: SortOrder[]
+  refs?: Record<string, unknown>
+  'current-schema-id'?: number
+  schemas?: TableSchema[]
+  'partition-specs'?: PartitionSpec[]
+  'last-updated-ms'?: number
+  'last-column-id'?: number
+  'table-uuid'?: string
+  'format-version'?: number
+}
+
+export interface CreateNamespaceRequest {
+  namespace: string[]
+  properties?: Record<string, string>
+}
+
+export interface CreateNamespaceResponse {
+  namespace: string[]
+  properties?: Record<string, string>
+}
+
+export interface GetNamespaceResponse {
+  namespace: string[]
+  properties: Record<string, string>
+}
+
+export interface ListNamespacesResponse {
+  namespaces: string[][]
+  'next-page-token'?: string
+}
+
+export interface ListTablesResponse {
+  identifiers: TableIdentifier[]
+  'next-page-token'?: string
+}
+
+export interface LoadTableResponse {
+  'metadata-location': string
+  metadata: TableMetadata
+  config?: Record<string, string>
+}

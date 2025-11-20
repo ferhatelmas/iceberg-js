@@ -1,0 +1,69 @@
+import type { HttpClient } from '../http/types'
+import type {
+  CreateTableRequest,
+  ListTablesResponse,
+  LoadTableResponse,
+  NamespaceIdentifier,
+  TableIdentifier,
+  TableMetadata,
+  UpdateTableRequest,
+} from './types'
+
+function namespaceToPath(namespace: string[]): string {
+  return namespace.join('\x1F')
+}
+
+export class TableOperations {
+  constructor(
+    private readonly client: HttpClient,
+    private readonly prefix: string = ''
+  ) {}
+
+  async listTables(namespace: NamespaceIdentifier): Promise<TableIdentifier[]> {
+    const response = await this.client.request<ListTablesResponse>({
+      method: 'GET',
+      path: `${this.prefix}/v1/namespaces/${namespaceToPath(namespace.namespace)}/tables`,
+    })
+
+    return response.data.identifiers
+  }
+
+  async createTable(
+    namespace: NamespaceIdentifier,
+    request: CreateTableRequest
+  ): Promise<TableMetadata> {
+    const response = await this.client.request<LoadTableResponse>({
+      method: 'POST',
+      path: `${this.prefix}/v1/namespaces/${namespaceToPath(namespace.namespace)}/tables`,
+      body: request,
+    })
+
+    return response.data.metadata
+  }
+
+  async updateTable(id: TableIdentifier, request: UpdateTableRequest): Promise<TableMetadata> {
+    const response = await this.client.request<LoadTableResponse>({
+      method: 'POST',
+      path: `${this.prefix}/v1/namespaces/${namespaceToPath(id.namespace)}/tables/${id.name}`,
+      body: request,
+    })
+
+    return response.data.metadata
+  }
+
+  async dropTable(id: TableIdentifier): Promise<void> {
+    await this.client.request<void>({
+      method: 'DELETE',
+      path: `${this.prefix}/v1/namespaces/${namespaceToPath(id.namespace)}/tables/${id.name}`,
+    })
+  }
+
+  async loadTable(id: TableIdentifier): Promise<TableMetadata> {
+    const response = await this.client.request<LoadTableResponse>({
+      method: 'GET',
+      path: `${this.prefix}/v1/namespaces/${namespaceToPath(id.namespace)}/tables/${id.name}`,
+    })
+
+    return response.data.metadata
+  }
+}
